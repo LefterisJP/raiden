@@ -442,7 +442,7 @@ class ChannelExternalState(object):
 
     def query_settled(self):
         # FIXME: the if None: return 0 constraint should be ensured on the proxy side
-        return self.netting_channel.settled() or 0
+        return self.netting_channel.settled() # or 0
 
     def query_transferred_amount(self, participant_address):
         return self.netting_channel.transferred_amount(participant_address)

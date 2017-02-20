@@ -613,7 +613,10 @@ class NettingChannelTesterMock(object):
         return closed
 
     def settled(self):
+        import pdb
+        pdb.set_trace()
         settled = self.proxy.settled()
+        assert settled is not None
         self.tester_state.mine(number_of_blocks=1)
         return settled
 

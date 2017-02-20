@@ -133,8 +133,8 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     # settle must be called by the apps triggered by the ChannelClose event,
     # and the channels must update it's state based on the ChannelSettled event
-    assert channel0.external_state.settled_block != 0
-    assert channel1.external_state.settled_block != 0
+    assert channel0.external_state.settled_block not in (0, None)
+    assert channel1.external_state.settled_block not in (0, None)
 
     address0 = app0.raiden.address
     address1 = app1.raiden.address
