@@ -1034,4 +1034,4 @@ class NettingChannel(object):
         Return:
             Filter: The filter instance.
         """
-        return self.events_filter(None, from_block. to_block)
+        return self.events_filter(None, from_block, to_block)
