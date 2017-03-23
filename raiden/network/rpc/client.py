@@ -13,6 +13,7 @@ from pyethapp.jsonrpc import (
     data_encoder,
     default_gasprice,
 )
+from ethereum.abi import ContractTranslator
 from pyethapp.rpc_client import topic_encoder, JSONRPCClient
 import requests
 
@@ -135,6 +136,16 @@ def patch_send_message(client, pool_maxsize=50):
             return r.content
 
     client.transport.send_message = send_message
+
+
+def get_logs(jsonrpc_client, abi, from_block='', to_block='', **kwargs):
+    translator = ContractTranslator(abi)
+    json_data = {
+        'fromBlock': from_block,
+        'toBlock': to_block,
+    }
+    json_data.update(kwargs)
+    return jsonrpc_client.call('eth_getLogs', json_data)
 
 
 def new_filter(jsonrpc_client, contract_address, topics, from_block='', to_block=''):
