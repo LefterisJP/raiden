@@ -19,6 +19,7 @@ from raiden.network.protocol import (
     NODE_NETWORK_UNKNOWN,
     NODE_NETWORK_REACHABLE,
 )
+from pyethapp.jsonrpc import address_decoder, address_encoder
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -177,12 +178,23 @@ def get_best_routes(
         network_state = nodeaddresses_statuses[partner_address]
         route_state = channel_to_routestate(channel, partner_address)
 
+        log.DEV(
+            "get_best_routes in loop",
+            network_state=network_state,
+            route_state=route_state,
+        )
+
         if network_state == NODE_NETWORK_REACHABLE:
             online_nodes.append(route_state)
 
         elif network_state == NODE_NETWORK_UNKNOWN:
             unknown_nodes.append(route_state)
 
+    log.DEV(
+        "get_best_routes return",
+        online_nodes=online_nodes,
+        unknown_nodes=unknown_nodes,
+    )
     return online_nodes + unknown_nodes
 
 

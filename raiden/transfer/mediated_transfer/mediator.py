@@ -33,6 +33,8 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.utils import sha3
+from ethereum import slogging
+log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 # Reduce the lock expiration by some additional blocks to prevent this exploit:
 # The payee could reveal the secret on it's lock expiration block, the lock
@@ -125,6 +127,12 @@ def is_channel_close_needed(transfer_pair, block_number):
         transfer_pair.payer_transfer,
         transfer_pair.payer_route.reveal_timeout,
         block_number,
+    )
+    log.DEV(
+        "At is_channel_close_needed",
+        safe_to_wait=safe_to_wait,
+        payee_received=payee_received,
+        payer_payed=payer_payed,
     )
 
     return (
@@ -292,6 +300,11 @@ def next_transfer_pair(payer_route, payer_transfer, routes_state, timeout_blocks
         payer_transfer.amount,
     )
 
+    log.DEV(
+        "At next_transfer_pair",
+        payee_route=payee_route
+    )
+
     if payee_route:
         assert payee_route.reveal_timeout < timeout_blocks
 
@@ -429,6 +442,13 @@ def events_for_refund_transfer(refund_route, refund_transfer, timeout_blocks, bl
     # payee_transfer.
     new_lock_timeout = timeout_blocks - refund_route.reveal_timeout
 
+    log.DEV(
+        "At events_for_refund_transfer",
+        timeout_blocks=timeout_blocks,
+        refund_reveal_timeout=refund_route.reveal_timeout,
+        new_lock_timeout=new_lock_timeout,
+    )
+
     if new_lock_timeout > 0:
         new_lock_expiration = new_lock_timeout + block_number
 
@@ -539,6 +559,7 @@ def events_for_close(transfers_pair, block_number):
 
     for pair in reversed(pending_transfers_pairs):
         if is_channel_close_needed(pair, block_number):
+            log.DEV("At events_for_close when channel close is needed")
             pair.payer_state = 'payer_waiting_close'
             channel_close = ContractSendChannelClose(
                 pair.payer_route.channel_address,
@@ -643,6 +664,13 @@ def mediate_transfer(state, payer_route, payer_transfer):
         state.block_number,
     )
 
+    log.DEV(
+        "At mediate_transfer",
+        timeout_blocks=timeout_blocks,
+        payer_transfer_expiration=payer_transfer.expiration,
+        state_block_number=state.block_number,
+    )
+
     if timeout_blocks > 0:
         transfer_pair, mediated_events = next_transfer_pair(
             payer_route,
@@ -653,6 +681,7 @@ def mediate_transfer(state, payer_route, payer_transfer):
         )
 
     if transfer_pair is None:
+        log.DEV("At mediated_transfer with transfer_pair being None")
         if state.transfers_pair:
             original_transfer = state.transfers_pair[0].payer_transfer
             original_route = state.transfers_pair[0].payer_route
