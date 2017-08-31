@@ -26,6 +26,8 @@ from raiden.transfer.mediated_transfer.mediator import (
     is_safe_to_wait,
 )
 from raiden.transfer.state import CHANNEL_STATE_OPENED
+from ethereum import slogging
+log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def events_for_close(state):
@@ -41,6 +43,14 @@ def events_for_close(state):
         state.block_number,
     )
     secret_known = from_transfer.secret is not None
+    log.DEV(
+        "At target's events_for_close()",
+        safe_to_wait=safe_to_wait,
+        secret_known=secret_known,
+        transfer_expiration=from_transfer.expiration,
+        reveal_timeout=from_route.reveal_timeout,
+        block_number=state.block_number
+    )
 
     if not safe_to_wait and secret_known:
         state.state = 'waiting_close'
@@ -88,7 +98,15 @@ def handle_inittarget(state_change):
 
     # if there is not enough time to safely withdraw the token on-chain
     # silently let the transfer expire.
+    log.DEV(
+        "At handle init target",
+        safe_to_wait=safe_to_wait,
+        transfer_expiration=from_transfer.expiration,
+        reveal_timeout=from_route.reveal_timeout,
+        block_number=block_number
+    )
     if safe_to_wait:
+        log.DEV("State machine: Sending the SecretRequest")
         secret_request = SendSecretRequest(
             from_transfer.identifier,
             from_transfer.amount,
@@ -107,12 +125,15 @@ def handle_secretreveal(state, state_change):
     """ Validate and handle a ReceiveSecretReveal state change. """
     valid_secret = sha3(state_change.secret) == state.from_transfer.hashlock
 
+    log.DEV("At target handle_secretreveal", valid_secret=valid_secret)
+
     if valid_secret:
         from_transfer = state.from_transfer
         from_route = state.from_route
 
         state.state = 'reveal_secret'
         from_transfer.secret = state_change.secret
+        log.DEV("At target handle_secretreveal in SendRevealSecret", valid_secret=valid_secret)
         reveal = SendRevealSecret(
             from_transfer.identifier,
             from_transfer.secret,
