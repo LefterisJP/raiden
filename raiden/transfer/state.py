@@ -2,6 +2,7 @@
 import random
 from binascii import hexlify
 from collections import namedtuple
+from enum import Enum
 from functools import total_ordering
 
 import networkx
@@ -44,9 +45,11 @@ CHANNEL_AFTER_CLOSE_STATES = (
     CHANNEL_STATE_SETTLED,
 )
 
-NODE_NETWORK_UNKNOWN = 'unknown'
-NODE_NETWORK_UNREACHABLE = 'unreachable'
-NODE_NETWORK_REACHABLE = 'reachable'
+
+class NodeNetworkStatus(Enum):
+    UNKNOWN = 'unknown'
+    UNREACHABLE = 'unreachable'
+    REACHABLE = 'reachable'
 
 
 def balanceproof_from_envelope(envelope_message):

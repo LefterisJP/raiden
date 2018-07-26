@@ -9,8 +9,7 @@ from raiden.transfer import channel, views
 from raiden.transfer.state import (
     ChainState,
     CHANNEL_STATE_OPENED,
-    NODE_NETWORK_REACHABLE,
-    NODE_NETWORK_UNKNOWN,
+    NodeNetworkStatus,
 )
 from raiden.utils import pex, typing
 from raiden.transfer.state import RouteState
@@ -144,11 +143,11 @@ def get_best_routes(
             )
             continue
 
-        network_state = network_statuses.get(partner_address, NODE_NETWORK_UNKNOWN)
-        if network_state != NODE_NETWORK_REACHABLE:
+        network_state = network_statuses.get(partner_address, NodeNetworkStatus.UNKNOWN)
+        if network_state != NodeNetworkStatus.REACHABLE:
             log.info(
                 'partner for channel %s - %s is not %s, ignoring' %
-                (pex(from_address), pex(partner_address), NODE_NETWORK_REACHABLE),
+                (pex(from_address), pex(partner_address), NodeNetworkStatus.REACHABLE),
             )
             continue
 

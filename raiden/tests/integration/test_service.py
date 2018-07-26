@@ -1,7 +1,7 @@
 import pytest
 
 from raiden.transfer import views
-from raiden.transfer import state
+from raiden.transfer.state import NodeNetworkStatus
 from raiden.messages import Ping
 
 
@@ -25,7 +25,7 @@ def test_udp_ping_pong(raiden_network, skip_if_not_udp):
         views.state_from_app(app0),
         app1.raiden.address,
     )
-    assert network_state is state.NODE_NETWORK_REACHABLE
+    assert network_state is NodeNetworkStatus.REACHABLE
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -57,4 +57,4 @@ def test_udp_ping_pong_unreachable_node(raiden_network, skip_if_not_udp):
         views.state_from_app(app0),
         app1.raiden.address,
     )
-    assert network_state is state.NODE_NETWORK_UNREACHABLE
+    assert network_state is NodeNetworkStatus.UNREACHABLE

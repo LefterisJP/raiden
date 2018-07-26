@@ -10,11 +10,7 @@ from raiden.exceptions import (
 )
 from raiden.utils import pex, typing
 from raiden.transfer import views
-from raiden.transfer.state import (
-    NODE_NETWORK_REACHABLE,
-    NODE_NETWORK_UNKNOWN,
-    NODE_NETWORK_UNREACHABLE,
-)
+from raiden.transfer.state import NodeNetworkStatus
 from raiden.network.transport.udp import udp_utils
 # type alias to avoid both circular dependencies and flake8 errors
 UDPTransport = 'UDPTransport'
@@ -50,7 +46,7 @@ def healthcheck(
 
     # The state of the node is unknown, the events are set to allow the tasks
     # to do work.
-    last_state = NODE_NETWORK_UNKNOWN
+    last_state = NodeNetworkStatus.UNKNOWN
     transport.set_node_network_state(
         recipient,
         last_state,
@@ -122,14 +118,14 @@ def healthcheck(
                 node=pex(transport.raiden.address),
                 to=pex(recipient),
                 current_state=last_state,
-                new_state=NODE_NETWORK_UNREACHABLE,
+                new_state=NodeNetworkStatus.UNREACHABLE,
                 retries=nat_keepalive_retries,
                 timeout=nat_keepalive_timeout,
             )
 
             # The node is not healthy, clear the event to stop all queue
             # tasks
-            last_state = NODE_NETWORK_UNREACHABLE
+            last_state = NodeNetworkStatus.UNREACHABLE
             transport.set_node_network_state(
                 recipient,
                 last_state,
@@ -162,11 +158,11 @@ def healthcheck(
                 node=pex(transport.raiden.address),
                 to=pex(recipient),
                 current_state=current_state,
-                new_state=NODE_NETWORK_REACHABLE,
+                new_state=NodeNetworkStatus.REACHABLE,
             )
 
-            if last_state != NODE_NETWORK_REACHABLE:
-                last_state = NODE_NETWORK_REACHABLE
+            if last_state != NodeNetworkStatus.REACHABLE:
+                last_state = NodeNetworkStatus.REACHABLE
                 transport.set_node_network_state(
                     recipient,
                     last_state,

@@ -15,7 +15,7 @@ from raiden.app import App
 from raiden.api.python import RaidenAPI
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
-from raiden.network.protocol import NODE_NETWORK_REACHABLE
+from raiden.transfer.state import NodeNetworkStatus
 from raiden.network.protocol import UDPTransport
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
@@ -203,7 +203,7 @@ def run(
 
             while True:
                 all_reachable = all(
-                    api.get_node_network_state(node) == NODE_NETWORK_REACHABLE
+                    api.get_node_network_state(node) == NodeNetworkStatus.REACHABLE
                     for node in partner_nodes
                 )
 

@@ -2,7 +2,7 @@ from raiden.transfer import channel
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     NettingChannelState,
-    NODE_NETWORK_UNKNOWN,
+    NodeNetworkStatus,
     ChainState,
     PaymentMappingState,
     TokenNetworkState,
@@ -62,7 +62,9 @@ def get_all_messagequeues(chain_state: ChainState) -> typing.Dict:
     return chain_state.queueids_to_queues
 
 
-def get_networkstatuses(chain_state: ChainState) -> typing.Dict:
+def get_networkstatuses(
+        chain_state: ChainState,
+) -> typing.Dict[typing.Address, NodeNetworkStatus]:
     return chain_state.nodeaddresses_to_networkstates
 
 
@@ -73,7 +75,7 @@ def get_node_network_status(
 
     return chain_state.nodeaddresses_to_networkstates.get(
         node_address,
-        NODE_NETWORK_UNKNOWN,
+        NodeNetworkStatus.UNKNOWN,
     )
 
 

@@ -1,10 +1,10 @@
 import gevent
 import structlog
 
-from raiden.transfer.state import NODE_NETWORK_REACHABLE
 from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
     CHANNEL_AFTER_CLOSE_STATES,
+    NodeNetworkStatus,
 )
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventTransferReceivedSuccess
@@ -215,9 +215,10 @@ def wait_for_settle_all_channels(
             )
 
 
-def wait_for_healthy(
+def wait_for_health_status(
         raiden: RaidenService,
         node_address: typing.Address,
+        health_status: NodeNetworkStatus,
         retry_timeout: float,
 ) -> None:
     """Wait until `node_address` becomes healthy.
@@ -229,7 +230,7 @@ def wait_for_healthy(
         views.state_from_raiden(raiden),
     )
 
-    while network_statuses.get(node_address) != NODE_NETWORK_REACHABLE:
+    while network_statuses.get(node_address) != health_status:
         gevent.sleep(retry_timeout)
         network_statuses = views.get_networkstatuses(
             views.state_from_raiden(raiden),

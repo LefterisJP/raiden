@@ -50,11 +50,7 @@ from raiden.raiden_service import RaidenService
 from raiden.transfer import events as transfer_events
 from raiden.transfer.architecture import Event
 from raiden.transfer.mediated_transfer import events as mediated_transfer_events
-from raiden.transfer.state import (
-    NODE_NETWORK_REACHABLE,
-    NODE_NETWORK_UNREACHABLE,
-    NODE_NETWORK_UNKNOWN,
-)
+from raiden.transfer.state import NodeNetworkStatus
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
 from raiden.message_handler import on_message
 from raiden.utils import (
@@ -770,11 +766,11 @@ class MatrixTransport:
         self._address_to_presence[address] = new_state
 
         if new_state is UserPresence.UNKNOWN:
-            reachability = NODE_NETWORK_UNKNOWN
+            reachability = NodeNetworkStatus.UNKNOWN
         elif new_state is UserPresence.OFFLINE:
-            reachability = NODE_NETWORK_UNREACHABLE
+            reachability = NodeNetworkStatus.UNREACHABLE
         else:
-            reachability = NODE_NETWORK_REACHABLE
+            reachability = NodeNetworkStatus.REACHABLE
             # The Matrix presence status 'unavailable' just means that the user has been inactive
             # for a while. So a user with UserPresence.UNAVAILABLE is still 'reachable' to us.
 
