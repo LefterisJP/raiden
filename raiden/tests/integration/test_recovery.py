@@ -12,6 +12,7 @@ from raiden.tests.utils.transfer import (
     mediated_transfer,
 )
 from raiden.transfer import views
+from raiden.transfer.state import NodeNetworkStatus
 from raiden.transfer.state_change import ContractReceiveChannelClosed
 
 
@@ -85,14 +86,16 @@ def test_recovery_happy_case(
     )
 
     # wait for the nodes' healthcheck to update the network statuses
-    waiting.wait_for_healthy(
+    waiting.wait_for_health_status(
         app0_restart.raiden,
         app1.raiden.address,
+        NodeNetworkStatus.REACHABLE,
         network_wait,
     )
-    waiting.wait_for_healthy(
+    waiting.wait_for_health_status(
         app1.raiden,
         app0_restart.raiden.address,
+        NodeNetworkStatus.REACHABLE,
         network_wait,
     )
 
@@ -270,14 +273,16 @@ def test_recovery_blockchain_events(
     del app0  # from here on the app0_restart should be used
 
     # wait for the nodes' healthcheck to update the network statuses
-    waiting.wait_for_healthy(
+    waiting.wait_for_health_status(
         app0_restart.raiden,
         app1.raiden.address,
+        NodeNetworkStatus.REACHABLE,
         network_wait,
     )
-    waiting.wait_for_healthy(
+    waiting.wait_for_health_status(
         app1.raiden,
         app0_restart.raiden.address,
+        NodeNetworkStatus.REACHABLE,
         network_wait,
     )
     restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(

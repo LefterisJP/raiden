@@ -15,6 +15,7 @@ from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
+from raiden.transfer.state import NodeNetworkStatus
 from raiden.utils import privatekey_to_address
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -426,9 +427,10 @@ def wait_for_usable_channel(
         retry_timeout,
     )
 
-    waiting.wait_for_healthy(
+    waiting.wait_for_health_status(
         app0.raiden,
         app1.raiden.address,
+        NodeNetworkStatus.REACHABLE,
         retry_timeout,
     )
 
