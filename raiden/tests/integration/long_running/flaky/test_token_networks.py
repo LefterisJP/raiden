@@ -4,7 +4,7 @@ import gevent
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.geth import wait_until_block
 from raiden.transfer import views, channel
-from raiden.transfer.state import CHANNEL_STATE_OPENED
+from raiden.transfer.state import CHANNEL_STATE_OPENED, NodeNetworkStatus
 from raiden import routing
 from raiden import waiting
 
@@ -64,6 +64,82 @@ def saturated_count(connection_managers, registry_address, token_address):
         is_manager_saturated(manager, registry_address, token_address)
         for manager in connection_managers
     ].count(True)
+
+
+@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize('settle_timeout', [6])
+@pytest.mark.parametrize('reveal_timeout', [3])
+def test_join_not_create_channel_with_offline_partner(
+        raiden_network,
+        token_addresses,
+        retry_timeout,
+):
+    registry_address = raiden_network[0].raiden.default_registry.address
+
+    app0 = raiden_network[0]
+    app1 = raiden_network[1]
+    app2 = raiden_network[2]
+
+    # pylint: disable=too-many-locals
+    token_address = token_addresses[0]
+
+    # make sure the third node has a health check running for both other nodes
+    app2.raiden.transport.start_health_check(app0.raiden.address)
+    app2.raiden.transport.start_health_check(app1.raiden.address)
+
+    # connect the first node (will register the token if necessary)
+    RaidenAPI(app0.raiden).token_network_connect(
+        registry_address,
+        token_address,
+        100,
+    )
+    # connect the second node
+    RaidenAPI(app1.raiden).token_network_connect(
+        registry_address,
+        token_address,
+        100,
+    )
+    # Wait till the first node gets a channel with the second node
+    waiting.wait_for_newchannel(
+        raiden=app0.raiden,
+        payment_network_id=registry_address,
+        token_address=token_address,
+        partner_address=app1.raiden.address,
+        retry_timeout=retry_timeout,
+    )
+
+    # Now close both app0 and app1
+    app0.raiden.stop()
+    app1.raiden.stop()
+    app0.stop()
+    app1.stop()
+
+    msg = 'After 5 seconds the partner node has not changed to unreachable'
+    with gevent.Timeout(5, Exception(msg)):
+        waiting.wait_for_health_status(
+            app2.raiden,
+            app0.raiden.address,
+            NodeNetworkStatus.UNREACHABLE,
+            retry_timeout,
+        )
+
+    # Finally connect the third node
+    RaidenAPI(app2.raiden).token_network_connect(
+        registry_address,
+        token_address,
+        100,
+    )
+
+    with gevent.Timeout(4, None):
+        waiting.wait_for_newchannel(
+            raiden=app0.raiden,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            partner_address=app1.raiden.address,
+            retry_timeout=retry_timeout,
+        )
+        assert False, "Channel opened with offline nodes"
 
 
 # TODO: add test scenarios for
@@ -177,7 +253,12 @@ def test_participant_selection(raiden_network, token_addresses, skip_if_tester):
 
     exception = ValueError('partner not reachable')
     with gevent.Timeout(30, exception=exception):
-        waiting.wait_for_healthy(sender, receiver.address, 1)
+        waiting.wait_for_health_status(
+            sender,
+            receiver.address,
+            NodeNetworkStatus.REACHABLE,
+            1,
+        )
 
     amount = 1
     RaidenAPI(sender).transfer_and_wait(
