@@ -70,6 +70,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
+    ContractReceiveUpdateTransfer,
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
@@ -1728,6 +1729,14 @@ def handle_channel_closed(
     return TransitionResult(channel_state, events)
 
 
+def handle_channel_update_transfer(
+        channel_state: NettingChannelState,
+        state_change: ContractReceiveChannelClosed,
+) -> TransitionResult:
+    # TODO
+    return TransitionResult(channel_state, [])
+
+
 def handle_channel_settled(
         channel_state: NettingChannelState,
         state_change: ContractReceiveChannelSettled,
@@ -1845,6 +1854,11 @@ def state_transition(
         )
     elif type(state_change) == ContractReceiveChannelClosed:
         iteration = handle_channel_closed(
+            channel_state,
+            state_change,
+        )
+    elif type(state_change) == ContractReceiveUpdateTransfer:
+        iteration = handle_channel_update_transfer(
             channel_state,
             state_change,
         )

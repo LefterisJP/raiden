@@ -10,6 +10,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
     ContractReceiveChannelBatchUnlock,
+    ContractReceiveUpdateTransfer,
     ContractReceiveRouteNew,
     ReceiveTransferDirect,
 )
@@ -52,6 +53,20 @@ def subdispatch_to_channel_by_id(
 
 
 def handle_channel_close(
+        token_network_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+):
+    return subdispatch_to_channel_by_id(
+        token_network_state,
+        state_change,
+        pseudo_random_generator,
+        block_number,
+    )
+
+
+def handle_channel_update_transfer(
         token_network_state,
         state_change,
         pseudo_random_generator,
@@ -313,6 +328,13 @@ def state_transition(
         )
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         iteration = handle_batch_unlock(
+            token_network_state,
+            state_change,
+            pseudo_random_generator,
+            block_number,
+        )
+    elif type(state_change) == ContractReceiveUpdateTransfer:
+        iteration = handle_channel_update_transfer(
             token_network_state,
             state_change,
             pseudo_random_generator,
