@@ -43,24 +43,23 @@ class InitiatorPaymentState(State):
     different secrethash.
     """
     __slots__ = (
-        'initiator',
+        'initiator_transfers',
         'cancelled_channels',
     )
 
     def __init__(self, initiator: 'InitiatorTransferState'):
-        # TODO: Allow multiple concurrent transfers and unlock refunds (issue #1091).
-        self.initiator = initiator
+        self.initiator_transfers = list([initiator])
         self.cancelled_channels = list()
 
     def __repr__(self):
-        return '<InitiatorPaymentState initiator:{}>'.format(
-            self.initiator,
+        return '<InitiatorPaymentState initiator_transfers:{}>'.format(
+            self.initiator_transfers,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, InitiatorPaymentState) and
-            self.initiator == other.initiator and
+            self.initiator_transfers == other.initiator_transfers and
             self.cancelled_channels == other.cancelled_channels
         )
 

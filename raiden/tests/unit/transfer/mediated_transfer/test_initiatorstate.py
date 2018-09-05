@@ -160,7 +160,8 @@ def test_init_with_usable_routes():
     assert transition.events, 'we have a valid route, the mediated transfer event must be emitted'
 
     payment_state = transition.new_state
-    assert payment_state.initiator.transfer_description == factories.UNIT_TRANSFER_DESCRIPTION
+    transfer_description = payment_state.initiator_transfers[0].transfer_description
+    assert transfer_description == factories.UNIT_TRANSFER_DESCRIPTION
 
     mediated_transfers = [e for e in transition.events if isinstance(e, SendLockedTransfer)]
     assert len(mediated_transfers) == 1, 'mediated_transfer should /not/ split the transfer'
