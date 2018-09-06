@@ -47,8 +47,11 @@ class InitiatorPaymentState(State):
         'cancelled_channels',
     )
 
-    def __init__(self, initiator: 'InitiatorTransferState'):
-        self.initiator_transfers = list([initiator])
+    def __init__(self, initiator: typing.Optional['InitiatorTransferState']):
+        if initiator:
+            self.initiator_transfers = list([initiator])
+        else:
+            self.initiator_transfers = list()
         self.cancelled_channels = list()
 
     def __repr__(self):
@@ -62,6 +65,14 @@ class InitiatorPaymentState(State):
             self.initiator_transfers == other.initiator_transfers and
             self.cancelled_channels == other.cancelled_channels
         )
+
+    def add_transfer(self, initiator_transfer: typing.Optional['InitiatorTransferState']):
+        if initiator_transfer:
+            self.initiator_transfers.append(initiator_transfer)
+
+    @property
+    def has_transfers(self) -> bool:
+        return len(self.initiator_transfer) > 0
 
     def __ne__(self, other):
         return not self.__eq__(other)

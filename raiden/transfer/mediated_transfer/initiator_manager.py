@@ -39,22 +39,26 @@ def iteration_from_sub(
 ) -> TransitionResult:
 
     if iteration.new_state:
-        payment_state.initiator = iteration.new_state
+        payment_state.add_transfer(iteration.new_state)
         return TransitionResult(payment_state, iteration.events)
     return iteration
 
 
-def can_cancel(payment_state: InitiatorPaymentState) -> bool:
+def _can_cancel(payment_state: InitiatorPaymentState) -> bool:
+    # TODO: ActionCancelRoute is not created anywhere yet. Revisit when we re-introduce it
     """ A transfer is only cancellable until the secret is revealed. """
     return (
-        payment_state.initiator is None or
-        payment_state.initiator.revealsecret is None
+        not payment_state.has_transfers or
+        any(
+            transfer.revealsecret is None for
+            transfer in payment_state.initiator_transfers
+        )
     )
 
 
 def sanity_check(payment_state: InitiatorPaymentState):
     assert (
-        payment_state is None or payment_state.initiator is not None
+        payment_state is None or payment_state.has_transfers
     ), 'either the task must be finished or there must be an initiator transfer pending'
 
 
@@ -72,7 +76,8 @@ def cancel_current_route(payment_state: InitiatorPaymentState) -> typing.List[Ev
 
     This allows a new route to be tried.
     """
-    assert can_cancel(payment_state), 'Cannot cancel a route after the secret is revealed'
+    # LTODO: ActionCancelRoute is not created anywhere yet. Revisit when we re-introduce it
+    assert _can_cancel(payment_state), 'Cannot cancel a route after the secret is revealed'
 
     transfer_description = payment_state.initiator.transfer_description
 
@@ -115,8 +120,9 @@ def handle_cancelroute(
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
+    # LTODO: ActionCancelRoute is not created anywhere yet. Revisit when we re-introduce it
     events = list()
-    if can_cancel(payment_state):
+    if _can_cancel(payment_state):
         transfer_description = payment_state.initiator.transfer_description
         cancel_events = cancel_current_route(payment_state)
 
@@ -149,7 +155,8 @@ def handle_cancelpayment(
         channel_state: NettingChannelState,
 ) -> TransitionResult:
     """ Cancel the payment. """
-    assert can_cancel(payment_state), 'Cannot cancel a transfer after the secret is revealed'
+    # LTODO: ActionCancelRoute is not created anywhere yet. Revisit when we re-introduce it
+    assert _can_cancel(payment_state), 'Cannot cancel a transfer after the secret is revealed'
 
     transfer_description = payment_state.initiator.transfer_description
     cancel_events = cancel_current_route(payment_state)
@@ -173,7 +180,7 @@ def handle_transferrefundcancelroute(
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
-
+    # LTODO: Adjust this to the new InitiatorPaymentState
     channel_identifier = payment_state.initiator.channel_identifier
     channel_state = channelidentifiers_to_channels[channel_identifier]
     refund_transfer = state_change.transfer
@@ -235,6 +242,7 @@ def handle_secretreveal(
         channelidentifiers_to_channels: initiator.ChannelMap,
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
+    # LTODO: Adjust this to the new InitiatorPaymentState
     channel_identifier = payment_state.initiator.channel_identifier
     channel_state = channelidentifiers_to_channels[channel_identifier]
     sub_iteration = initiator.handle_secretreveal(
