@@ -546,8 +546,8 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
 
         raiden_api = RaidenAPI(app.raiden)
         rest_api = RestAPI(raiden_api)
-        api_server = APIServer(rest_api)
         (api_host, api_port) = split_endpoint(args['api_address'])
+        api_server = APIServer(rest_api, config={'host': api_host, 'port': api_port})
         api_server.start(api_host, api_port)
 
         raiden_api.channel_open(
