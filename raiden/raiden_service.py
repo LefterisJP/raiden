@@ -437,7 +437,7 @@ class RaidenService(Runnable):
         if self.db_lock is not None:
             self.db_lock.release()
 
-        log.debug('Raiden Service stopped', node=pex(self.address))
+        log.debug('Raiden service stopped', node=pex(self.address))
 
     def add_pending_greenlet(self, greenlet: gevent.Greenlet):
         greenlet.link_exception(self.on_error)

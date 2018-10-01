@@ -145,6 +145,7 @@ class AlarmTask(Runnable):
 
     def first_run(self, known_block_number):
         """ Blocking call to update the local state, if necessary. """
+
         assert self.callbacks, 'callbacks not set'
 
         chain_id = self.chain.network_id

@@ -447,9 +447,10 @@ class APIServer(Runnable):
 
     def start(self):
         log.debug(
-            'Starting rest api',
+            'REST API started',
             host=self.config['host'],
             port=self.config['port'],
+            node=pex(self.rest_api.raiden_api.address),
         )
 
         # WSGI expects an stdlib logger. With structlog there's conflict of
@@ -477,9 +478,10 @@ class APIServer(Runnable):
 
     def stop(self):
         log.debug(
-            'Stopping rest api',
+            'REST API stopped',
             host=self.config['host'],
             port=self.config['port'],
+            node=pex(self.rest_api.raiden_api.address),
         )
 
         if self.wsgiserver is not None:
