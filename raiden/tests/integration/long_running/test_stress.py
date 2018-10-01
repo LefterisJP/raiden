@@ -1,9 +1,12 @@
+import gc
 import logging
 import random
+import traceback
 from http import HTTPStatus
 from itertools import combinations, count
 
 import gevent
+import gevent.signal
 import grequests
 import pytest
 import requests
@@ -11,6 +14,7 @@ import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 from flask import url_for
 from gevent import pool, server
+from greenlet import greenlet
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -28,6 +32,18 @@ from raiden.utils.cli import LogLevelConfigType
 STATELESS_EVENT_HANDLER = RaidenEventHandler()
 
 log = structlog.get_logger(__name__)
+
+
+def print_stacktraces(_1, _2):
+    for ob in gc.get_objects():
+        if not isinstance(ob, greenlet):
+            continue
+        if not ob:
+            continue
+        log.error(''.join(traceback.format_stack(ob.gr_frame)))
+
+
+gevent.signal.signal(gevent.signal.SIGUSR1, print_stacktraces)
 
 
 class RandomCrashEventHandler(RaidenEventHandler):
