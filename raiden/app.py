@@ -24,12 +24,13 @@ from raiden.settings import (
 )
 from raiden.storage.versions import older_db_file
 from raiden.utils import pex, typing
+from raiden.utils.runnable import Runnable
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-class App:  # pylint: disable=too-few-public-methods
+class App(Runnable):  # pylint: disable=too-few-public-methods
     DEFAULT_CONFIG = {
         'privatekey_hex': '',
         'reveal_timeout': DEFAULT_REVEAL_TIMEOUT,
@@ -139,6 +140,8 @@ class App:  # pylint: disable=too-few-public-methods
         # raiden.ui.console:Console assumes that a services
         # attribute is available for auto-registration
         self.services = dict()
+        super().__init__()
+        self.raiden.link_exception(self.on_error)
 
     def __repr__(self):
         return '<{} {}>'.format(
@@ -146,10 +149,14 @@ class App:  # pylint: disable=too-few-public-methods
             pex(self.raiden.address),
         )
 
+    def _run(self):
+        self.raiden.join()
+
     def start(self):
         """ Start the raiden app. """
         if self.raiden.stop_event.is_set():
             self.raiden.start()
+        super().start()
 
     def stop(self):
         """ Stop the raiden app.

@@ -13,10 +13,17 @@ from raiden.tests.utils.network import (
     wait_for_token_networks,
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
+from raiden.utils.runnable import Supervisor
+
+
+@pytest.fixture
+def supervisor():
+    return Supervisor()
 
 
 @pytest.fixture
 def raiden_chain(
+        supervisor,
         token_addresses,
         token_network_registry_address,
         channels_per_node,
@@ -73,6 +80,9 @@ def raiden_chain(
         private_rooms=private_rooms,
     )
 
+    for app in raiden_apps:
+        supervisor.supervise(app)
+
     start_tasks = [gevent.spawn(app.raiden.start) for app in raiden_apps]
     gevent.joinall(start_tasks, raise_error=True)
 
@@ -122,6 +132,7 @@ def raiden_chain(
 
 @pytest.fixture
 def raiden_network(
+        supervisor,
         token_addresses,
         token_network_registry_address,
         channels_per_node,
@@ -169,6 +180,9 @@ def raiden_network(
         local_matrix_url=local_matrix_server,
         private_rooms=private_rooms,
     )
+
+    for app in raiden_apps:
+        supervisor.supervise(app)
 
     start_tasks = [gevent.spawn(app.raiden.start) for app in raiden_apps]
     gevent.joinall(start_tasks, raise_error=True)
