@@ -4,6 +4,7 @@ import sys
 
 import gevent
 import py
+from _pytest.outcomes import Failed
 from gevent import monkey
 
 monkey.patch_all()
@@ -159,7 +160,7 @@ def dont_exit_pytest():
 
     This allows the test suite to finish in case an exception is unhandled.
     """
-    gevent.get_hub().SYSTEM_ERROR = BaseException
+    gevent.get_hub().SYSTEM_ERROR += (Failed, )
     gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit)
 
 
