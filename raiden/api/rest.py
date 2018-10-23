@@ -458,6 +458,9 @@ class APIServer(Runnable):
         # WSGI expects an stdlib logger. With structlog there's conflict of
         # method names. Rest unhandled exception will be re-raised here:
         wsgi_log = logging.getLogger(__name__ + '.pywsgi')
+
+        # server.stop() clears the handle and the pool, this is okay since a
+        # new WSGIServer is created on each start
         pool = gevent.pool.Pool()
         wsgiserver = WSGIServer(
             (self.config['host'], self.config['port']),
