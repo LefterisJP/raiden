@@ -56,6 +56,7 @@ from raiden.utils import (
     privatekey_to_address,
     random_secret,
     sha3,
+    spawn_and_link_with_parent,
     typing,
 )
 from raiden.utils.runnable import Runnable
@@ -260,7 +261,6 @@ class RaidenService(Runnable):
             self.serialization_file = None
             self.db_lock = None
 
-        self.greenlets = list()
         self.event_poll_lock = gevent.lock.Semaphore()
         self.gas_reserve_lock = gevent.lock.Semaphore()
 
@@ -515,7 +515,7 @@ class RaidenService(Runnable):
             therefore /required/ there is *NO* order among these.
         """
         assert isinstance(transaction_event, ContractSendEvent)
-        self.spawn_sub_task(self._handle_transaction_event, transaction_event)
+        spawn_and_link_with_parent(self._handle_transaction_event, transaction_event)
 
     def _handle_transaction_event(self, transaction_event: ContractSendEvent):
         assert isinstance(transaction_event, ContractSendEvent)
@@ -537,14 +537,6 @@ class RaidenService(Runnable):
                 log.error(str(e))
             else:
                 raise
-
-    def spawn_sub_task(self, func: typing.Callable, *args, **kwargs):
-        """ Spawn a sub-task and ensures an error on it crashes self/main greenlet. """
-
-        greenlet = gevent.spawn(func, *args, **kwargs)
-        self.greenlets.append(greenlet)
-        greenlet.link_exception(self.on_error)
-        greenlet.link_value(self.greenlets.remove)
 
     def set_node_network_state(self, node_address, network_state):
         state_change = ActionChangeNodeNetworkState(node_address, network_state)
