@@ -184,7 +184,6 @@ def dont_exit_pytest():
 
     This allows the test suite to finish in case an exception is unhandled.
     """
-    gevent.get_hub().SYSTEM_ERROR = BaseException
     gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit)
 
 
