@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`3196` If our partner updates onchain with earlier balance proof find the event in the DB and properly perform the unlock onchain.
 * :bug:`3183` If as initiator our nodes receives a RefundTransfer then do not delete the payment task at the lock expiration block but wait for a LockExpired message. Solves one hanging transfer case.
 * :bug:`3179` Properly process a SendRefundTransfer event if it's the last one before settlement and not crash the client.
 * :bug:`3175` If Github checking of latest version returns unexpected response do not let Raiden crash.
