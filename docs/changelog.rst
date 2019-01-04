@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`2793` Parallelize onchain transactions on node restart.
 * :feature:`3217` If channel is already updated onchain don't call updateNonClosingBalanceProof.
 * :bug:`3216` If coming online after partner closed channel don't try to send updateNonClosingBalanceProof twice and crash Raiden.
 * :bug:`3211` If using parity and getting the already imported error, attempt to handle it and not crash the client.
