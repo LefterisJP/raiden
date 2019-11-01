@@ -11,17 +11,22 @@ The ignored state changes will still be applied, but they will just not be print
 """
 import json
 import re
+import sys
 from contextlib import closing
 from itertools import chain
 
 import click
 from eth_utils import encode_hex, is_checksum_address, to_canonical_address
 
+from raiden.messages.path_finding_service import PFSFeeUpdate
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES, SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
 from raiden.transfer.architecture import Event, StateChange, StateManager
+from raiden.transfer.channel import get_balance
+from raiden.transfer.events import EventPaymentSentSuccess
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.utils import pex, to_checksum_address
 from raiden.utils.typing import (
     Address,
@@ -153,6 +158,10 @@ def replay_wal(
     state_manager = StateManager(state_transition=node.state_transition, current_state=None)
     wal = WriteAheadLog(state_manager, storage)
 
+    last_balance0_1 = 0
+    last_balance1_0 = 0
+    total_amount_sent = 0
+    counter = 0
     for _, state_change in enumerate(all_state_changes):
         # Dispatching the state changes one-by-one to easy debugging
         _, events = wal.state_manager.dispatch([state_change])
@@ -161,23 +170,80 @@ def replay_wal(
         msg = "Chain state must never be cleared up."
         assert chain_state, msg
 
-        channel_state = views.get_channelstate_by_token_network_and_partner(
-            chain_state,
-            to_canonical_address(token_network_address),
-            to_canonical_address(partner_address),
-        )
+        # channel_state = views.get_channelstate_by_token_network_and_partner(
+        #     chain_state,
+        #     to_canonical_address(token_network_address),
+        #     to_canonical_address(partner_address),
+        # )
 
-        if not channel_state:
-            continue
+        # if not channel_state:
+        #     continue
 
         ###
         # Customize this to filter things further somewhere around here.
         # An example would be to add `import pdb; pdb.set_trace()`
         # and inspect the state.
         ###
+        # payment_success_event_found = False
+        # for event_list in events:
+        #     for event in event_list:
+        #         if isinstance(event, EventPaymentSentSuccess):
+        #             payment_success_event_found = True
+        #             total_amount_sent += event.amount
+        #             break
 
-        print_state_change(state_change, translator=translator)
-        print_events(chain.from_iterable(events), translator=translator)
+        # if not payment_success_event_found:
+        #     continue
+        # print(f"Total amount sent: {total_amount_sent}")
+
+        # balance0_1 = get_balance(
+        #     sender=channel_state.our_state, receiver=channel_state.partner_state
+        # )
+        # balance1_0 = get_balance(
+        #     sender=channel_state.partner_state, receiver=channel_state.our_state
+        # )
+
+        # if balance1_0 == last_balance1_0 and balance0_1 == last_balance0_1:
+        #     # if balance0_1 == last_balance0_1:
+        #     continue
+
+        # print(f"Balance0_1 {balance0_1}")
+        # print(f"Balance1_0 {balance1_0}")
+
+        # last_balance0_1 = balance0_1
+        # last_balance1_0 = balance1_0
+
+        event_found = False
+        for event_list in events:
+            for event in event_list:
+                if isinstance(event, SendLockedTransfer):
+                    event_found = True
+                    if event.transfer.balance_proof.locked_amount != 15000000000000000:
+                        print(
+                            f"Sent more than we should have!!!: {event.transfer.balance_proof.locked_amount}"
+                        )
+                        counter += 1
+
+                    total_amount_sent += event.transfer.balance_proof.locked_amount
+
+        if not event_found:
+            continue
+        print(f"Total amount sent: {total_amount_sent} with {counter} 'bad' transfers")
+
+        # print(f"{counter} more transfers sent")
+
+        # print_state_change(state_change, translator=translator)
+        # print_events(chain.from_iterable(events), translator=translator)
+
+        # fee_update = PFSFeeUpdate.from_channel_state(channel_state)
+        # if fee_update.fee_schedule.flat != 0:
+        #     print("flat fee detected!")
+
+        # if fee_update.fee_schedule.proportional != 0:
+        #     print("proportional fee detected!")
+
+        # if fee_update.fee_schedule._penalty_func is not None:
+        #     print("penalty function  exists!")
 
 
 @click.command(help=__doc__)
