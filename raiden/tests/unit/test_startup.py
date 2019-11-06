@@ -9,7 +9,11 @@ from raiden.app import App
 from raiden.constants import Environment, RoutingMode
 from raiden.network import pathfinding
 from raiden.network.pathfinding import PFSInfo
-from raiden.tests.utils.factories import make_address, make_token_network_registry_address
+from raiden.tests.utils.factories import (
+    make_address,
+    make_privatekey_bin,
+    make_token_network_registry_address,
+)
 from raiden.tests.utils.mocks import MockProxyManager, MockWeb3
 from raiden.ui.checks import check_ethereum_network_id
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
@@ -154,7 +158,7 @@ def test_setup_proxies_raiden_addresses_are_given():
     network_id = 5
     config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
     contracts = {}
-    proxy_manager = MockProxyManager(node_address=make_address())
+    proxy_manager = MockProxyManager(privkey=make_privatekey_bin())
 
     proxies = setup_proxies_or_exit(
         config=config,
@@ -182,7 +186,7 @@ def test_setup_proxies_all_addresses_are_given():
     network_id = 5
     config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
     contracts = {}
-    proxy_manager = MockProxyManager(node_address=make_address())
+    proxy_manager = MockProxyManager(privkey=make_privatekey_bin())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         proxies = setup_proxies_or_exit(
@@ -211,7 +215,7 @@ def test_setup_proxies_all_addresses_are_known():
     network_id = 5
     config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
     contracts = setup_contracts_or_exit(config, network_id)
-    proxy_manager = MockProxyManager(node_address=make_address())
+    proxy_manager = MockProxyManager(privkey=make_privatekey_bin())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         proxies = setup_proxies_or_exit(
@@ -249,7 +253,7 @@ def test_setup_proxies_no_service_registry_but_pfs():
         ),
     }
     contracts = {}
-    proxy_manager = MockProxyManager(node_address=make_address())
+    proxy_manager = MockProxyManager(privkey=make_privatekey_bin())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         proxies = setup_proxies_or_exit(
@@ -282,7 +286,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
         ),
     }
     contracts = {}
-    proxy_manager = MockProxyManager(node_address=make_address())
+    proxy_manager = MockProxyManager(privkey=make_privatekey_bin())
 
     with pytest.raises(SystemExit):
         with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):

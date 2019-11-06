@@ -3,7 +3,12 @@ import random
 from collections import defaultdict
 from unittest.mock import Mock, PropertyMock
 
-from raiden.constants import RoutingMode
+from hexbytes import HexBytes
+
+from raiden.blockchain.events import BlockchainEvents, DecodedEvent
+from raiden.constants import Environment, RoutingMode
+from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.raiden_service import RaidenService
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
@@ -12,14 +17,17 @@ from raiden.transfer import node
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state_change import ActionInitChain
+from raiden.ui.startup import setup_contracts_or_exit
 from raiden.utils import privatekey_to_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,
+    Any,
     BlockNumber,
     BlockSpecification,
     ChannelID,
     Dict,
+    Iterable,
     Optional,
     TokenAmount,
     TokenNetworkAddress,
@@ -28,12 +36,22 @@ from raiden.utils.typing import (
 from raiden_contracts.utils.type_aliases import ChainID
 
 
+class MockBlockchainEvents:
+    def __init__(self, events_to_return):
+        self.events_to_return = events_to_return
+
+    def poll_blockchain_events(self, block_number: BlockNumber) -> Iterable[DecodedEvent]:
+        return self.events_to_return
+
+
 class MockJSONRPCClient:
-    def __init__(self, address: Address):
+    def __init__(self, privkey: bytes):
         # To be manually set by each test
         self.balances_mapping: Dict[Address, TokenAmount] = {}
         self.chain_id = ChainID(17)
-        self.address = address
+        self.privkey = privkey
+        self.address = privatekey_to_address(privkey)
+        self.web3 = MockWeb3(self.chain_id)
 
     @staticmethod
     def can_query_state_for_block(block_identifier):  # pylint: disable=unused-argument
@@ -66,9 +84,9 @@ class MockPaymentChannel:
 
 
 class MockProxyManager:
-    def __init__(self, node_address: Address):
+    def __init__(self, privkey: bytes):
         # let's make a single mock token network for testing
-        self.client = MockJSONRPCClient(node_address)
+        self.client = MockJSONRPCClient(privkey=privkey)
         self.token_network = MockTokenNetworkProxy(client=self.client)
 
     def payment_channel(self, canonical_identifier: CanonicalIdentifier):
@@ -113,30 +131,59 @@ class MockChainState:
         self.identifiers_to_tokennetworkregistries: dict = {}
 
 
-class MockRaidenService:
+class MockRaidenService(RaidenService):
     def __init__(self, message_handler=None, state_transition=None, private_key=None, config=None):
+        if config is None:
+            config = {}
+
         if private_key is None:
-            self.privkey, self.address = factories.make_privkey_address()
+            private_key, self.address = factories.make_privkey_address()
         else:
-            self.privkey = private_key
             self.address = privatekey_to_address(private_key)
 
-        self.rpc_client = MockJSONRPCClient(self.address)
-        self.proxy_manager = MockProxyManager(node_address=self.address)
-        self.signer = LocalSigner(self.privkey)
+        rpc_client = MockJSONRPCClient(privkey=private_key)
+        proxy_manager = MockProxyManager(privkey=private_key)
 
-        self.message_handler = message_handler
-        self.routing_mode = RoutingMode.PRIVATE
-        self.config = config
+        config.setdefault("blockchain", {})
+        config.setdefault("environment_type", Environment.DEVELOPMENT)
+        config.setdefault("database_path", ":memory:")
+        config["blockchain"].setdefault("query_interval", 10)
+        config["blockchain"].setdefault("confirmation_blocks", 5)
+        if "contracts_path" not in config:
+            setup_contracts_or_exit(config, rpc_client.chain_id)
 
-        self.user_deposit = Mock()
-        self.default_registry = Mock()
-        self.default_registry.address = factories.make_address()
-        self.default_one_to_n_address = factories.make_address()
-        self.default_msc_address = factories.make_address()
+        super().__init__(
+            rpc_client=rpc_client,
+            proxy_manager=proxy_manager,
+            query_start_block=0,
+            default_registry=object(),
+            default_secret_registry=object(),
+            default_service_registry=object(),
+            default_one_to_n_address=None,
+            default_msc_address=factories.make_address(),
+            transport=object(),
+            raiden_event_handler=RaidenEventHandler(),
+            message_handler=message_handler,
+            routing_mode=RoutingMode.PFS,
+            config=config,
+            user_deposit=None,
+        )
 
-        self.targets_to_identifiers_to_statuses: Dict[Address, dict] = defaultdict(dict)
-        self.route_to_feedback_token: dict = {}
+        # self.signer = LocalSigner(private_key)
+
+        # self.message_handler = message_handler
+        # self.routing_mode = RoutingMode.PRIVATE
+        # self.config = config
+
+        # self.user_deposit = Mock()
+        # self.default_registry = Mock()
+        # self.default_registry.address = factories.make_address()
+        # self.default_one_to_n_address = factories.make_address()
+        # self.default_msc_address = factories.make_address()
+
+        # self.targets_to_identifiers_to_statuses: Dict[Address, dict] = defaultdict(dict)
+        # self.route_to_feedback_token: dict = {}
+        # self.event_poll_lock = gevent.lock.Semaphore()
 
         if state_transition is None:
             state_transition = node.state_transition
@@ -145,6 +192,8 @@ class MockRaidenService:
         state_manager = StateManager(state_transition, None)
         storage = SerializedSQLiteStorage(":memory:", serializer)
         self.wal = WriteAheadLog(state_manager, storage)
+
+        self.blockchain_events = BlockchainEvents(chain_id=self.rpc_client.chain_id)
 
         state_change = ActionInitChain(
             pseudo_random_generator=random.Random(),
@@ -216,8 +265,9 @@ class MockEth:
         self, block_identifier: BlockSpecification
     ) -> Dict:
         return {
-            "number": 42,
-            "hash": "0x8cb5f5fb0d888c03ec4d13f69d4eb8d604678508a1fa7c1a8f0437d0065b9b67",
+            "number": 1,
+            "hash": HexBytes("0x3f683b65d412e00b068b7ee699d6765df8d5306a5c9b15b133e249adf4b7d456"),
+            "gasLimit": 9990259,
         }
 
 
